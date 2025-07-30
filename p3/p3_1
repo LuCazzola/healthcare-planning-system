@@ -1,0 +1,114 @@
+==>
+216 fill_box wBot1 box1 scalpel central_warehouse
+225 pick_up_1st_box wBot1 carrier1 box1 central_warehouse
+522 pick_up_2nd_box wBot1 carrier1 box2 central_warehouse
+2352 move_worker_bot_with_2_boxes wBot1 carrier1 box1 box2 central_warehouse corridor1
+2480 move_worker_bot_with_2_boxes wBot1 carrier1 box1 box2 corridor1 reception
+2680 move_worker_bot_with_2_boxes wBot1 carrier1 box2 box1 reception emergency_room
+2742 drop_down_2nd_box wBot1 carrier1 box1
+2743 deliver_supply wBot1 box1 scalpel emergency_room trauma_unit
+3524 move_worker_bot_with_1_box wBot1 carrier1 box2 emergency_room reception
+3612 move_worker_bot_with_1_box wBot1 carrier1 box2 reception corridor1
+3712 move_worker_bot_with_1_box wBot1 carrier1 box2 corridor1 central_warehouse
+3745 drop_down_1st_box wBot1 carrier1 box2
+3750 fill_box wBot1 box2 defibrillator central_warehouse
+3759 pick_up_1st_box wBot1 carrier1 box2 central_warehouse
+3830 move_worker_bot_with_1_box wBot1 carrier1 box2 central_warehouse corridor1
+3895 move_worker_bot_with_1_box wBot1 carrier1 box2 corridor1 reception
+3918 move_worker_bot_with_1_box wBot1 carrier1 box2 reception emergency_room
+3996 drop_down_1st_box wBot1 carrier1 box2
+3997 deliver_supply wBot1 box2 defibrillator emergency_room resuscitation_unit
+4353 move_bot_alone wBot1 emergency_room reception
+4384 move_bot_alone wBot1 reception corridor1
+4427 move_bot_alone wBot1 corridor1 central_warehouse
+4461 fill_box wBot1 box3 bandages central_warehouse
+4470 pick_up_1st_box wBot1 carrier1 box3 central_warehouse
+4494 move_worker_bot_with_1_box wBot1 carrier1 box3 central_warehouse corridor1
+4564 move_worker_bot_with_1_box wBot1 carrier1 box3 corridor1 surgical_block
+4629 drop_down_1st_box wBot1 carrier1 box3
+4630 deliver_supply wBot1 box3 bandages surgical_block operation_unit
+4656 pick_up_patient hBot1 patient1 entrance
+4730 move_helper_bot_patient hBot1 entrance reception patient1
+4798 move_helper_bot_patient hBot1 reception corridor1 patient1
+4830 move_helper_bot_patient hBot1 corridor1 surgical_block patient1
+4901 move_helper_bot_patient hBot1 surgical_block cardiology_ward patient1
+4924 drop_down_patient hBot1 patient1
+4925 deliver_patient hBot1 patient1 cardiology_unit cardiology_ward
+4973 move_bot_alone hBot1 cardiology_ward surgical_block
+5002 move_bot_alone hBot1 surgical_block corridor1
+5030 move_bot_alone hBot1 corridor1 reception
+5298 move_bot_alone hBot1 reception entrance
+5304 pick_up_patient hBot1 patient2 entrance
+5328 move_helper_bot_patient hBot1 entrance reception patient2
+5393 move_helper_bot_patient hBot1 reception corridor1 patient2
+5423 move_helper_bot_patient hBot1 corridor1 diagnostic_lab patient2
+5490 move_helper_bot_patient hBot1 diagnostic_lab neurology_ward patient2
+5514 drop_down_patient hBot1 patient2
+5515 deliver_patient hBot1 patient2 neurology_unit neurology_ward
+root 8 2748 4005 5516 5520
+8 deliver_supply_to_medical_unit scalpel trauma_unit -> m_deliver_supply_complete 5517 1231 2740 2743
+10 handle_box_acquisition wBot1 carrier1 box1 scalpel central_warehouse -> m_handle_box_acquisition_at_supply_location
+202 route_worker_bot wBot1 central_warehouse -> m_route_worker_bot_noop
+209 ground_box wBot1 carrier1 box1 -> ground_box_noop
+214 ground_boxes_bulk wBot1 carrier1 -> m_ground_boxes_bulk_noop
+220 fill_boxes_bulk wBot1 central_warehouse -> m_fill_boxes_bulk_noop
+223 pick_up_box wBot1 carrier1 box1 central_warehouse -> m_pick_up_only_box_1 225
+231 pick_up_boxes_bulk wBot1 carrier1 central_warehouse -> m_pick_up_box_2 522 1223
+1223 pick_up_boxes_bulk wBot1 carrier1 central_warehouse -> m_pick_up_boxes_noop
+1231 route_worker_bot wBot1 emergency_room -> m_route_worker_bot_with_2_boxes 2352 2449
+2449 route_worker_bot wBot1 emergency_room -> m_route_worker_bot_with_2_boxes 2480 2597
+2597 route_worker_bot wBot1 emergency_room -> m_route_worker_bot_with_2_boxes 2680 2732
+2732 route_worker_bot wBot1 emergency_room -> m_route_worker_bot_noop
+2740 drop_down_box wBot1 carrier1 box1 -> m_drop_down_2nd_box 2742
+2748 deliver_supply_to_medical_unit defibrillator resuscitation_unit -> m_deliver_supply_complete 5518 3769 3994 3997
+3292 handle_box_acquisition wBot1 carrier1 box2 defibrillator central_warehouse -> m_handle_box_acquisition_in_bot
+3485 route_worker_bot wBot1 central_warehouse -> m_route_worker_bot_with_1_box 3524 3561
+3561 route_worker_bot wBot1 central_warehouse -> m_route_worker_bot_with_1_box 3612 3645
+3645 route_worker_bot wBot1 central_warehouse -> m_route_worker_bot_with_1_box 3712 3735
+3735 route_worker_bot wBot1 central_warehouse -> m_route_worker_bot_noop
+3743 ground_box wBot1 carrier1 box2 -> m_ground_box_1 3745
+3748 ground_boxes_bulk wBot1 carrier1 -> m_ground_boxes_bulk_noop
+3754 fill_boxes_bulk wBot1 central_warehouse -> m_fill_boxes_bulk_noop
+3757 pick_up_box wBot1 carrier1 box2 central_warehouse -> m_pick_up_only_box_1 3759
+3762 pick_up_boxes_bulk wBot1 carrier1 central_warehouse -> m_pick_up_boxes_noop
+3769 route_worker_bot wBot1 emergency_room -> m_route_worker_bot_with_1_box 3830 3837
+3837 route_worker_bot wBot1 emergency_room -> m_route_worker_bot_with_1_box 3895 3911
+3911 route_worker_bot wBot1 emergency_room -> m_route_worker_bot_with_1_box 3918 3987
+3987 route_worker_bot wBot1 emergency_room -> m_route_worker_bot_noop
+3994 drop_down_box wBot1 carrier1 box2 -> m_drop_down_1st_box 3996
+4005 deliver_supply_to_medical_unit bandages operation_unit -> m_deliver_supply_complete 5519 4480 4627 4630
+4141 handle_box_acquisition wBot1 carrier1 box3 bandages central_warehouse -> m_handle_box_acquisition_at_supply_location
+4334 route_worker_bot wBot1 central_warehouse -> m_route_worker_bot_alone 4353 4364
+4364 route_worker_bot wBot1 central_warehouse -> m_route_worker_bot_alone 4384 4402
+4402 route_worker_bot wBot1 central_warehouse -> m_route_worker_bot_alone 4427 4447
+4447 route_worker_bot wBot1 central_warehouse -> m_route_worker_bot_noop
+4454 ground_box wBot1 carrier1 box3 -> ground_box_noop
+4459 ground_boxes_bulk wBot1 carrier1 -> m_ground_boxes_bulk_noop
+4465 fill_boxes_bulk wBot1 central_warehouse -> m_fill_boxes_bulk_noop
+4468 pick_up_box wBot1 carrier1 box3 central_warehouse -> m_pick_up_only_box_1 4470
+4473 pick_up_boxes_bulk wBot1 carrier1 central_warehouse -> m_pick_up_boxes_noop
+4480 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_with_1_box 4494 4548
+4548 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_with_1_box 4564 4620
+4620 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_noop
+4627 drop_down_box wBot1 carrier1 box3 -> m_drop_down_1st_box 4629
+4654 route_helper_bot hBot1 entrance -> m_route_helper_bot_noop
+4665 route_helper_bot hBot1 cardiology_ward -> m_route_helper_bot_with_patient 4730 4739
+4739 route_helper_bot hBot1 cardiology_ward -> m_route_helper_bot_with_patient 4798 4821
+4821 route_helper_bot hBot1 cardiology_ward -> m_route_helper_bot_with_patient 4830 4873
+4873 route_helper_bot hBot1 cardiology_ward -> m_route_helper_bot_with_patient 4901 4922
+4922 route_helper_bot hBot1 cardiology_ward -> m_route_helper_bot_noop
+4951 route_helper_bot hBot1 entrance -> m_route_helper_bot_alone 4973 4979
+4979 route_helper_bot hBot1 entrance -> m_route_helper_bot_alone 5002 5009
+5009 route_helper_bot hBot1 entrance -> m_route_helper_bot_alone 5030 5049
+5049 route_helper_bot hBot1 entrance -> m_route_helper_bot_alone 5298 5302
+5302 route_helper_bot hBot1 entrance -> m_route_helper_bot_noop
+5313 route_helper_bot hBot1 neurology_ward -> m_route_helper_bot_with_patient 5328 5359
+5359 route_helper_bot hBot1 neurology_ward -> m_route_helper_bot_with_patient 5393 5409
+5409 route_helper_bot hBot1 neurology_ward -> m_route_helper_bot_with_patient 5423 5465
+5465 route_helper_bot hBot1 neurology_ward -> m_route_helper_bot_with_patient 5490 5512
+5512 route_helper_bot hBot1 neurology_ward -> m_route_helper_bot_noop
+5516 deliver_patient_to_medical_unit patient1 cardiology_unit -> m_deliver_patient 4654 4656 4665 4924 4925
+5517 retrieve_supply wBot1 carrier1 box1 scalpel central_warehouse -> m_retrieve_supply 10 202 209 214 216 220 223 231
+5518 retrieve_supply wBot1 carrier1 box2 defibrillator central_warehouse -> m_retrieve_supply 3292 3485 3743 3748 3750 3754 3757 3762
+5519 retrieve_supply wBot1 carrier1 box3 bandages central_warehouse -> m_retrieve_supply 4141 4334 4454 4459 4461 4465 4468 4473
+5520 deliver_patient_to_medical_unit patient2 neurology_unit -> m_deliver_patient 4951 5304 5313 5514 5515

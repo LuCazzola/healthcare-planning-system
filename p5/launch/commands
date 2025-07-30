@@ -1,0 +1,94 @@
+set instance entrance location
+set instance reception location
+set instance diagnostic_lab location
+set instance corridor1 location
+set instance corridor2 location
+set instance central_warehouse location
+set instance surgical_block location
+set instance emergency_room location
+set instance cardiology_ward location
+set instance neurology_ward location
+
+set instance w_bot1 worker_bot
+set instance h_bot1 helper_bot
+
+set instance carrier1 carrier
+
+set instance box1 box
+set instance box2 box
+
+set instance scalpel supply
+set instance defibrillator supply
+
+set instance trauma_unit med_unit
+set instance resuscitation_unit med_unit
+set instance triage_unit med_unit
+set instance operation_unit med_unit
+set instance cardiology_unit med_unit
+set instance neurology_unit med_unit
+
+set instance patient1 patient
+
+set predicate (linked entrance reception)
+set predicate (linked reception entrance)
+set predicate (linked reception emergency_room)
+set predicate (linked emergency_room reception)
+set predicate (linked emergency_room corridor2)
+set predicate (linked corridor2 emergency_room)
+set predicate (linked corridor2 diagnostic_lab)
+set predicate (linked diagnostic_lab corridor2)
+set predicate (linked corridor1 diagnostic_lab)
+set predicate (linked diagnostic_lab corridor1)
+set predicate (linked surgical_block corridor1)
+set predicate (linked corridor1 surgical_block)
+set predicate (linked corridor1 central_warehouse)
+set predicate (linked central_warehouse corridor1)
+set predicate (linked reception corridor1)
+set predicate (linked corridor1 reception)
+set predicate (linked diagnostic_lab neurology_ward)
+set predicate (linked neurology_ward diagnostic_lab)
+set predicate (linked surgical_block cardiology_ward)
+set predicate (linked cardiology_ward surgical_block)
+
+set predicate (bot_owns_carrier w_bot1 carrier1)
+set predicate (carrier_empty carrier1)
+set predicate (carrier_can_1 carrier1)
+set predicate (carrier_can_2 carrier1)
+set predicate (carrier_can_3 carrier1)
+
+set predicate (at trauma_unit emergency_room)
+set predicate (at resuscitation_unit emergency_room)
+set predicate (at triage_unit reception)
+set predicate (at operation_unit surgical_block)
+set predicate (at cardiology_unit cardiology_ward)
+set predicate (at neurology_unit neurology_ward)
+
+set predicate (at w_bot1 central_warehouse)
+set predicate (at h_bot1 entrance)
+
+set predicate (worker_bot_is_free w_bot1)
+set predicate (helper_bot_is_free h_bot1)
+
+set predicate (worker_bot_is_unlocked w_bot1)
+set predicate (helper_bot_is_unlocked h_bot1)
+
+set predicate (at box1 central_warehouse)
+set predicate (at box2 central_warehouse)
+
+set predicate (box_is_empty box1)
+set predicate (box_is_empty box2)
+
+set predicate (box_on_ground box1)
+set predicate (box_on_ground box2)
+
+set predicate (at scalpel central_warehouse)
+set predicate (at defibrillator central_warehouse)
+
+set predicate (at patient1 entrance)
+set predicate (patient_on_ground patient1)
+
+set predicate (needs_supply trauma_unit scalpel)
+set predicate (needs_supply resuscitation_unit defibrillator)
+set predicate (needs_patient operation_unit patient1)
+
+set goal (and (has_supply trauma_unit scalpel)(has_supply resuscitation_unit defibrillator)(has_patient operation_unit patient1)(at w_bot1 central_warehouse)(at h_bot1 entrance)(worker_bot_is_free w_bot1)(helper_bot_is_free h_bot1)(carrier_empty carrier1)(at box1 central_warehouse)(at box2 central_warehouse)(box_is_empty box1)(box_is_empty box2)(box_on_ground box1)(box_on_ground box2))

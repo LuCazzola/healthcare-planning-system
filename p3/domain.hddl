@@ -1,0 +1,1209 @@
+(define (domain healthcare_facility_3_base)
+    (:requirements :strips :typing :equality :hierachie)
+
+    (:types
+        location carrier - object
+        worker_bot helper_bot - robot
+        med_unit robot box supply patient - locatable
+    )
+
+    (:predicates
+        ; location related
+        (at ?obj - locatable ?loc - location) ; locatable is at a location
+        (linked ?loc1 - location ?loc2 - location) ; two locations are linked (roadmap)
+        
+        ; General Robot related
+        (bot_is_free ?bot - robot) ; bot is free (not carrying a box or helping a patient)
+        
+        ; Worker bots
+        (bot_owns_carrier ?bot - robot ?carr - carrier) ; a bot owns a carrier
+        
+        ; Helper bots
+        (helping_patient ?bot - helper_bot ?pat - patient) ; helper bot is helping the patient
+
+        ; Carrier related
+        (carrying_box ?carr - carrier ?obj - box) ; carrier has the box loaded
+        (carrier_can_1 ?carr - carrier)  ; carrier can hold box 1
+        (carrier_can_2 ?carr - carrier)   ; carrier can hold box 2   
+        (carrier_can_3 ?carr - carrier)  ; carrier can hold box 3 (maximum)
+        ; Carrier capacity settings
+        (carrier_empty ?carr - carrier) ; carrier has 0 boxes
+        (carrier_has_1 ?carr - carrier); carrier has 1 box
+        (carrier_has_2 ?carr - carrier) ; carrier has 2 boxes
+        (carrier_has_3 ?carr - carrier) ; carrier has 3 boxes (maximum)
+        
+        ; Box related
+        (box_is_empty ?box - box) ; box is empty
+        (box_on_ground ?box - box) ; box is on the ground (not being carried by a bot)
+
+        ; Patient related
+        (patient_on_ground ?pat - patient) ; patient is on the ground (not being helped)
+
+        ; Supply related
+        (supply_in_box ?sup - supply ?box - box) ; supply is in a box
+        
+        ; Goal Oriented
+        (needs_supply ?mu - med_unit ?sup - supply) ; medical unit needs a supply
+        (needs_patient ?mu - med_unit ?pat - patient) ; medical unit needs a patient so he they can treat them
+        (has_supply ?mu - med_unit ?sup - supply) ; medical unit has a supply
+        (has_patient ?mu - med_unit ?pat - patient) ; medical unit has a patient
+    )
+
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;;;;;;;;;;;;;;;;;;;                                TASKS                                           ;;;;;;;;;;;;;;;;;;;
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ;; CORE TASKS (highest level in hierarchy)
+
+    (:task deliver_patient_to_medical_unit
+        :parameters (?pat - patient ?mu - med_unit)
+        :precondition (and
+            (needs_patient ?mu ?pat) ; the medical unit needs such patient
+        )
+        :effect ()
+    )
+
+    (:task deliver_supply_to_medical_unit
+        :parameters (?sup - supply ?mu - med_unit)
+        :precondition (and
+            (needs_supply ?mu ?sup) ; the medical unit needs such supply
+        )
+        :effect ()
+    )
+
+    ;; SUBTASKS
+
+    (:task route_helper_bot
+        :parameters (?bot - helper_bot ?destination - location)
+        :precondition ()
+        :effect ()
+    )
+
+    (:task route_worker_bot
+        :parameters (?bot - worker_bot ?destination - location)
+        :precondition ()
+        :effect ()
+    )
+
+    (:task pick_up_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?loc - location)
+        :precondition (and
+            (at ?bot ?loc)
+            (at ?box ?loc)
+            (box_on_ground ?box) ; box is on the ground (not being carried by some other bot)
+            (bot_owns_carrier ?bot ?carr)
+        )
+        :effect ()
+    )
+
+    (:task pick_up_boxes_bulk
+        :parameters (?bot - worker_bot ?carr - carrier ?loc - location)
+        :precondition (and
+            (at ?bot ?loc)
+            (bot_owns_carrier ?bot ?carr)
+        )
+        :effect ()
+    )
+
+    (:task fill_boxes_bulk
+        :parameters (?bot - worker_bot ?loc - location)
+        :precondition (and
+            (at ?bot ?loc)
+        )
+        :effect ()
+    )
+
+    (:task drop_down_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :precondition (and
+            (bot_owns_carrier ?bot ?carr)
+            (carrying_box ?carr ?box)
+        )
+        :effect ()
+    )
+
+    (:task ground_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :precondition (and
+            (bot_owns_carrier ?bot ?carr)
+            (box_is_empty ?box)
+        )
+        :effect ()
+    )
+
+    (:task ground_boxes_bulk
+        :parameters (?bot - worker_bot ?carr - carrier)
+        :precondition (and
+            (bot_owns_carrier ?bot ?carr)
+        )
+        :effect ()
+    )
+
+    (:task handle_box_acquisition
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?sup - supply ?sup_loc - location)
+        :precondition (and
+            (bot_owns_carrier ?bot ?carr)
+            (at ?sup ?sup_loc)
+        )
+        :effect ()
+    )
+
+    (:task retrieve_supply
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?sup - supply ?sup_loc - location)
+        :precondition (and
+            (at ?bot ?sup_loc)
+            (at ?sup ?sup_loc)
+            (at ?box ?sup_loc)
+            (box_is_empty ?box)
+            (bot_owns_carrier ?bot ?carr)
+        )
+        :effect ()
+    )
+
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;;;;;;;;;;;;;;;;;;;                                METHODS                                         ;;;;;;;;;;;;;;;;;;;
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ; Task: Deliver Patient to Medical Unit
+    ; * allows to deliver a patient to a medical unit, with the following subtasks:
+    ; 1. route the helper bot to the patient location
+    ; 2. pick up the patient
+    ; 3. route the helper bot to the medical unit location
+    ; 4. drop down the patient
+    ; 5. deliver patient
+
+    (:method m_deliver_patient
+        :parameters (?bot - helper_bot ?pat - patient ?mu - med_unit ?bot_loc - location ?pat_loc - location ?unit_loc - location)
+        :task (deliver_patient_to_medical_unit ?pat ?mu)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?bot_loc) (at ?pat ?pat_loc) (at ?mu ?unit_loc)
+            ; not being helped by some other bot
+            (patient_on_ground ?pat)
+            ; bot is available
+            (bot_is_free ?bot)
+        )
+        :subtasks (and
+            (task0 (route_helper_bot ?bot ?pat_loc))
+            (task1 (pick_up_patient ?bot ?pat ?pat_loc))
+            (task2 (route_helper_bot ?bot ?unit_loc))
+            (task3 (drop_down_patient ?bot ?pat))
+            (task4 (deliver_patient ?bot ?pat ?mu ?unit_loc))
+        )
+        :ordering (and
+            (task0 < task1)
+            (task1 < task2)
+            (task2 < task3)
+            (task3 < task4)
+        )
+    )
+
+
+    ; Task: Deliver Supply to Medical Unit
+    ; ; * allows to deliver a supply to a medical unit, with the following subtasks:
+    ; 1. retrieve the supply
+    ; 2. route the worker bot to the medical unit location
+    ; 3. drop down the box with the supply
+    ; 4. perform the delivery
+
+    (:method m_deliver_supply_complete
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?sup - supply ?mu - med_unit ?sup_loc - location ?mu_loc - location)
+        :task (deliver_supply_to_medical_unit ?sup ?mu)
+        :precondition (and
+            (at ?mu ?mu_loc)
+            (at ?sup ?sup_loc)
+            (bot_owns_carrier ?bot ?carr)
+        )
+        :subtasks (and
+            (task0 (retrieve_supply ?bot ?carr ?box ?sup ?sup_loc))
+            (task1 (route_worker_bot ?bot ?mu_loc))
+            (task2 (drop_down_box ?bot ?carr ?box))
+            (task3 (deliver_supply ?bot ?box ?sup ?mu_loc ?mu))
+        )
+        :ordering (and
+            (task0 < task1)
+            (task1 < task2)
+            (task2 < task3)
+        )
+    )
+
+    ; As above, but skips the retrieval of the supply, if the bot is already available locally
+    (:method m_deliver_supply_skip_retrieval
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?sup - supply ?mu - med_unit ?sup_loc - location ?mu_loc - location)
+        :task (deliver_supply_to_medical_unit ?sup ?mu)
+        :precondition (and
+            (at ?mu ?mu_loc)
+            (at ?sup ?sup_loc)
+            (bot_owns_carrier ?bot ?carr)
+            (carrying_box ?carr ?box)
+            (supply_in_box ?sup ?box)
+        )
+        :subtasks (and
+            (task0 (route_worker_bot ?bot ?mu_loc))
+            (task1 (drop_down_box ?bot ?carr ?box))
+            (task2 (deliver_supply ?bot ?box ?sup ?mu_loc ?mu))
+        )
+        :ordering (and
+            (task0 < task1)
+            (task1 < task2)
+        )
+    )
+
+    ; Task: Route Helper-Bots
+    ; * allows to recursively move helper-bots to a destination
+    
+    (:method m_route_helper_bot_noop
+        :parameters (?bot - helper_bot ?destination - location)
+        :task (route_helper_bot ?bot ?destination)
+        :precondition (and
+            (at ?bot ?destination) ; end of recursion, bot reached destination
+        )
+        :subtasks ()
+    )
+    
+    (:method m_route_helper_bot_alone
+        :parameters (?bot - helper_bot ?pat - patient ?from - location ?to - location ?destination - location)
+        :task (route_helper_bot ?bot ?destination)
+        :precondition (and
+            (at ?bot ?from)
+            (linked ?from ?to)
+            (bot_is_free ?bot)
+        )
+        :subtasks (and
+            (task0 (move_bot_alone ?bot ?from ?to))
+            (task1 (route_helper_bot ?bot ?destination)) ; recursion
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    (:method m_route_helper_bot_with_patient
+        :parameters (?bot - helper_bot ?pat - patient ?from - location ?to - location ?destination - location)
+        :task (route_helper_bot ?bot ?destination)
+        :precondition (and
+            (at ?bot ?from)
+            (helping_patient ?bot ?pat)
+            (linked ?from ?to)
+        )
+        :subtasks (and
+            (task0 (move_helper_bot_patient ?bot ?from ?to ?pat))
+            (task1 (route_helper_bot ?bot ?destination)) ; recursion
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    ; Task: Route Worker-Bots
+    ; * allows to recursively move worker-bots to a destination
+
+    (:method m_route_worker_bot_noop
+        :parameters (?bot - worker_bot ?destination - location)
+        :task (route_worker_bot ?bot ?destination)
+        :precondition (and
+            (at ?bot ?destination) ; end of recursion, bot reached destination
+        )
+        :subtasks ()
+    )
+
+    (:method m_route_worker_bot_alone
+        :parameters (?bot - worker_bot ?from - location ?to - location ?destination - location)
+        :task (route_worker_bot ?bot ?destination)
+        :precondition (and
+            (at ?bot ?from)
+            (linked ?from ?to)
+            (bot_is_free ?bot)
+        )
+        :subtasks (and
+            (task0 (move_bot_alone ?bot ?from ?to))
+            (task1 (route_worker_bot ?bot ?destination)) ; recursion
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    (:method m_route_worker_bot_with_1_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?from - location ?to - location ?destination - location)
+        :task (route_worker_bot ?bot ?destination)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?from)
+            (linked ?from ?to)
+            ; carrier
+            (bot_owns_carrier ?bot ?carr)
+            (carrier_has_1 ?carr)
+            (carrying_box ?carr ?box)
+        )
+        :subtasks (and
+            (task0 (move_worker_bot_with_1_box ?bot ?carr ?box ?from ?to))
+            (task1 (route_worker_bot ?bot ?destination)) ; recursion
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    (:method m_route_worker_bot_with_2_boxes
+        :parameters (?bot - worker_bot ?carr - carrier ?box1 - box ?box2 - box  ?from - location ?to - location ?destination - location)
+        :task (route_worker_bot ?bot ?destination)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?from)
+            (linked ?from ?to)
+            ; carrier
+            (bot_owns_carrier ?bot ?carr)
+            (carrier_has_2 ?carr) ; 2 boxes being carried
+            (carrying_box ?carr ?box1)
+            (carrying_box ?carr ?box2)
+            ; boxes must be different
+            (not (= ?box1 ?box2))
+        )
+        :subtasks (and
+            (task0 (move_worker_bot_with_2_boxes ?bot ?carr ?box1  ?box2  ?from  ?to))
+            (task1 (route_worker_bot ?bot ?destination)) ; recursion
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    (:method m_route_worker_bot_with_3_boxes
+        :parameters (?bot - worker_bot ?carr - carrier ?box1 - box ?box2 - box ?box3 - box ?from - location ?to - location ?destination - location)
+        :task (route_worker_bot ?bot ?destination)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?from)
+            (linked ?from ?to)
+            ; carrier
+            (bot_owns_carrier ?bot ?carr)
+            (carrier_has_3 ?carr) ; 3 boxes being carried
+            (carrying_box ?carr ?box1)
+            (carrying_box ?carr ?box2)
+            (carrying_box ?carr ?box3)
+            ; boxes must be different
+            (not (= ?box1 ?box2)) (not (= ?box1 ?box3)) (not (= ?box2 ?box3))
+        )
+        :subtasks (and
+            (task0 (move_worker_bot_with_3_boxes ?bot ?carr ?box1 ?box2 ?box3 ?from ?to))
+            (task1 (route_worker_bot ?bot ?destination)) ; recursion
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    ; Task: Pick Up Boxes (Single)
+    ; * allows to pick up a single box at current location, updating correctly carrier state
+
+    (:method m_pick_up_only_box_1
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?loc - location)
+        :task (pick_up_box ?bot ?carr ?box ?loc)
+        :precondition (and
+            ; carrier is empty
+            (carrier_empty ?carr)
+            ; can carry one more
+            (carrier_can_1 ?carr) ; redundant, all carriers can carry at least 1 box, keep for clarity
+        )
+        :subtasks (and
+            (task0 (pick_up_1st_box ?bot ?carr ?box ?loc))
+        )
+    )
+
+    (:method m_pick_up_only_box_2
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?loc - location)
+        :task (pick_up_box ?bot ?carr ?box ?loc)
+        :precondition (and
+            ; carrier has 1 box on
+            (carrier_has_1 ?carr)
+            ; can carry one more
+            (carrier_can_2 ?carr)
+        )
+        :subtasks (and
+            (task0 (pick_up_2nd_box ?bot ?carr ?box ?loc))
+        )
+    )
+
+    (:method m_pick_up_only_box_3
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?loc - location)
+        :task (pick_up_box ?bot ?carr ?box ?loc)
+        :precondition (and
+            ; carrier has 2 boxes on
+            (carrier_has_2 ?carr)
+            ; can carry one more
+            (carrier_can_3 ?carr)
+        )
+        :subtasks (and
+            (task0 (pick_up_3rd_box ?bot ?carr ?box ?loc))
+        )
+    )
+
+    ; Task: Pick Up Boxes (Bulk)
+    ; * allows to pick up an arbitrary (even zero) number of boxes at current location
+
+    (:method m_pick_up_boxes_noop
+        :parameters (?bot - worker_bot ?carr - carrier ?loc - location)
+        :task (pick_up_boxes_bulk ?bot ?carr ?loc)
+        :precondition ()
+        :subtasks () ; no-op method
+    )
+
+    (:method m_pick_up_box_1
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?loc - location)
+        :task (pick_up_boxes_bulk ?bot ?carr ?loc)
+        :precondition (and
+            ; location consistency
+            (at ?box ?loc)
+            ; box not being carried by some other bot
+            (box_on_ground ?box)
+            ; carrier is empty
+            (carrier_empty ?carr)
+            (carrier_can_1 ?carr) ; redundant, all carriers can carry at least 1 box, keep for clarity
+        )
+        :subtasks (and
+            (task0 (pick_up_1st_box ?bot ?carr ?box ?loc))
+            (task1 (pick_up_boxes_bulk ?bot ?carr ?loc)) ; recursion
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    (:method m_pick_up_box_2
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?loc - location)
+        :task (pick_up_boxes_bulk ?bot ?carr ?loc)
+        :precondition (and
+            ; location consistency
+            (at ?box ?loc)
+            ; box not being carried by some other bot
+            (box_on_ground ?box)
+            ; carrier has 1 box on
+            (carrier_has_1 ?carr)
+            (carrier_can_2 ?carr)
+        )
+        :subtasks (and
+            (task0 (pick_up_2nd_box ?bot ?carr ?box ?loc))
+            (task1 (pick_up_boxes_bulk ?bot ?carr ?loc)) ; recursion
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    (:method m_pick_up_box_3
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?loc - location)
+        :task (pick_up_boxes_bulk ?bot ?carr ?loc)
+        :precondition (and
+            ; location consistency
+            (at ?box ?loc)
+            ; box not being carried by some other bot
+            (box_on_ground ?box)
+            ; carrier has 2 boxes on
+            (carrier_has_2 ?carr)
+            (carrier_can_3 ?carr)
+        )
+        :subtasks (and
+            (task0 (pick_up_3rd_box ?bot ?carr ?box ?loc))
+            (task1 (pick_up_boxes_bulk ?bot ?carr ?loc)) ; recursion
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    ; Task: Fill Box (Bulk)
+    ; * allows to fill an arbitrary (even zero) number of boxes at current location with some supply
+
+    (:method m_fill_boxes_bulk_noop
+        :parameters (?bot - worker_bot ?loc - location)
+        :task (fill_boxes_bulk ?bot ?loc)
+        :precondition ()
+        :subtasks () ; no-op method
+    )
+
+    (:method m_fill_box_bulk
+        :parameters (?bot - worker_bot ?box - box ?sup - supply ?loc - location ?mu - med_unit)
+        :task (fill_boxes_bulk ?bot ?loc)
+        :precondition (and
+            ; location consistency
+            (at ?sup ?loc) (at ?box ?loc)
+            ; the box is not being carried
+            (box_on_ground ?box)
+            ; box must be empty
+            (box_is_empty ?box)
+            ; IMPORTANT: the supply is actually needed by some medical unit
+            ; without this, the search grows exponentially
+            (needs_supply ?mu ?sup)
+        )
+        :subtasks (and
+            (task0 (fill_box ?bot ?box ?sup ?loc))
+            (task1 (fill_boxes_bulk ?bot ?loc)) ; recursion
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    ; Task: Drop Down Box
+    ; * allows to drop down a box from the carrier, updating correctly carrier state
+    
+    (:method m_drop_down_1st_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :task (drop_down_box ?bot ?carr ?box)
+        :precondition (and
+            ; carrier has 1 box
+            (carrier_has_1 ?carr)
+        )
+        :subtasks (and
+            (task0 (drop_down_1st_box ?bot ?carr ?box))
+        )
+    )
+    (:method m_drop_down_2nd_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :task (drop_down_box ?bot ?carr ?box)
+        :precondition (and
+            ; carrier has 2 boxes
+            (carrier_has_2 ?carr)
+        )
+        :subtasks (and
+            (task0 (drop_down_2nd_box ?bot ?carr ?box))
+        )
+    )
+    (:method m_drop_down_3rd_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :task (drop_down_box ?bot ?carr ?box)
+        :precondition (and
+            ; carrier has 3 boxes
+            (carrier_has_3 ?carr)
+        )
+        :subtasks (and
+            (task0 (drop_down_3rd_box ?bot ?carr ?box))
+        )
+    )
+
+    ; Task: Ground Box
+    ; * allows to drop down a box on the ground, updating correctly carrier state
+
+    (:method ground_box_noop
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :task (ground_box ?bot ?carr ?box)
+        :precondition (and
+            (box_on_ground ?box) ; the box is already on ground
+        )
+        :subtasks () ; no-op method
+    )
+
+    (:method m_ground_box_1
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :task (ground_box ?bot ?carr ?box)
+        :precondition (and
+            (carrier_has_1 ?carr)
+            (carrying_box ?carr ?box)
+            (box_is_empty ?box)
+        )
+        :subtasks (and
+            (task0 (drop_down_1st_box ?bot ?carr ?box))
+        )
+    )
+
+    (:method m_ground_box_2
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :task (ground_box ?bot ?carr ?box)
+        :precondition (and
+            (carrier_has_2 ?carr)
+            (carrying_box ?carr ?box)
+            (box_is_empty ?box)
+        )
+        :subtasks (and
+            (task0 (drop_down_2nd_box ?bot ?carr ?box))
+        )
+    )
+
+    (:method m_ground_box_3
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :task (ground_box ?bot ?carr ?box)
+        :precondition (and
+            (carrier_has_3 ?carr)
+            (carrying_box ?carr ?box)
+            (box_is_empty ?box)
+        )
+        :subtasks (and
+            (task0 (drop_down_3rd_box ?bot ?carr ?box))
+        )
+    )
+
+    ; Task: Ground Boxes Bulk
+    ; * optional task which allows to drop down an arbitrary (even zero) number of boxes in the carrier
+
+    (:method m_ground_boxes_bulk_noop
+        :parameters (?bot - worker_bot ?carr - carrier)
+        :task (ground_boxes_bulk ?bot ?carr)
+        :precondition ()
+        :subtasks () ; no-op method
+    )
+
+    (:method m_ground_boxes_bulk_1
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :task (ground_boxes_bulk ?bot ?carr)
+        :precondition (and
+            (carrier_has_1 ?carr)
+            (carrying_box ?carr ?box)
+            (box_is_empty ?box)
+        )
+        :subtasks (and
+            (task0 (drop_down_1st_box ?bot ?carr ?box))
+            (task1 (ground_boxes_bulk ?bot ?carr)) ; recursion
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    (:method m_ground_boxes_bulk_2
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :task (ground_boxes_bulk ?bot ?carr)
+        :precondition (and
+            (carrier_has_1 ?carr)
+            (carrying_box ?carr ?box)
+            (box_is_empty ?box)
+        )
+        :subtasks (and
+            (task0 (drop_down_2nd_box ?bot ?carr ?box))
+            (task1 (ground_boxes_bulk ?bot ?carr)) ; recursion
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    (:method m_ground_boxes_bulk_3
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :task (ground_boxes_bulk ?bot ?carr)
+        :precondition (and
+            (carrier_has_1 ?carr)
+            (carrying_box ?carr ?box)
+            (box_is_empty ?box)
+        )
+        :subtasks (and
+            (task0 (drop_down_3rd_box ?bot ?carr ?box))
+            (task1 (ground_boxes_bulk ?bot ?carr)) ; recursion
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )    
+
+    ; Task: Box Acquisition
+    ; * makes sure an empty box is available at the supply location in some way
+    ; cases: 
+    ; ** there are empty boxes at supply location (no-op method)
+    ; ** the bot already has an empty box in its carrier (no-op method)
+    ; ** the bot retrieves an empty box (0 -> 1 capacity)
+    ; ** the bot retrieves an empty box (1 -> 2 capacity)
+    ; ** the bot retrieves an empty box (2 -> 3 capacity)
+
+    (:method m_handle_box_acquisition_at_supply_location
+        ; there are empty boxes at supply location
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?sup - supply ?sup_loc - location)
+        :task (handle_box_acquisition ?bot ?carr ?box ?sup ?sup_loc)
+        :precondition (and
+            (at ?box ?sup_loc)
+            (box_on_ground ?box)
+            (box_is_empty ?box)
+        )
+        :subtasks () ; no-op method
+    )
+
+    (:method m_handle_box_acquisition_in_bot
+        ; the bot already has an empty box in its carrier
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?sup - supply ?sup_loc - location )
+        :task (handle_box_acquisition ?bot ?carr ?box ?sup ?sup_loc)
+        :precondition (and
+            ; the bot has an empty box in its carrier
+            (carrying_box ?carr ?box)
+            (box_is_empty ?box)
+        )
+        :subtasks () ; no-op method
+    )
+
+    (:method m_handle_box_acquisition_retrieve_box_1
+        ; the bot retrieves an empty box (0 -> 1 capacity)
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?sup - supply ?box_loc - location ?sup_loc - location)
+        :task (handle_box_acquisition ?bot ?carr ?box ?sup ?sup_loc)
+        :precondition (and
+            ; box is at location
+            (at ?box ?box_loc)
+            (not (= ?box_loc ?sup_loc)) ; box is not at supply location, otherwise it's pointless to retrieve it
+            ; box not being carried by some other bot
+            (box_on_ground ?box)
+            (box_is_empty ?box)
+            ; the carrier is empty
+            (carrier_empty ?carr)
+            (carrier_can_1 ?carr) ; redundant, all carriers can carry at least 1 box, keep for clarity
+        )
+        :subtasks (and
+            (task0 (route_worker_bot ?bot ?box_loc))
+            (task1 (pick_up_1st_box ?bot ?carr ?box ?box_loc))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    (:method m_handle_box_acquisition_retrieve_box_2
+        ; the bot retrieves an empty box (1 -> 2 capacity)
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?sup - supply ?bot_loc - location ?box_loc - location ?sup_loc - location )
+        :task (handle_box_acquisition ?bot ?carr ?box ?sup ?sup_loc)
+        :precondition (and
+            ; box is at location
+            (at ?box ?box_loc)
+            (not (= ?box_loc ?sup_loc)) ; box is not at supply location, otherwise it's pointless to retrieve it
+            ; box not being carried by some other bot
+            (box_on_ground ?box)
+            (box_is_empty ?box)
+            ; the carrier has 1 box
+            (carrier_has_1 ?carr)
+            (carrier_can_2 ?carr)
+        )
+        :subtasks (and
+            (task0 (route_worker_bot ?bot ?box_loc))
+            (task1 (pick_up_2nd_box ?bot ?carr ?box ?box_loc))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    (:method m_handle_box_acquisition_retrieve_box_3
+        ; the bot retrieves an empty box (2 -> 3 capacity)
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?sup - supply ?bot_loc - location ?box_loc - location ?sup_loc - location )
+        :task (handle_box_acquisition ?bot ?carr ?box ?sup ?sup_loc)
+        :precondition (and
+            ; box is at location
+            (at ?box ?box_loc)
+            (not (= ?box_loc ?sup_loc)) ; box is not at supply location, otherwise it's pointless to retrieve it
+            ; box not being carried by some other bot
+            (box_on_ground ?box)
+            (box_is_empty ?box)
+            ; the carrier has 2 boxes
+            (carrier_has_2 ?carr)
+            (carrier_can_3 ?carr)
+        )
+        :subtasks (and
+            (task0 (route_worker_bot ?bot ?box_loc))
+            (task1 (pick_up_3rd_box ?bot ?carr ?box ?box_loc))
+        )
+        :ordering (and
+            (task0 < task1)
+        )
+    )
+
+    ; Task: Retrieve Supply
+    ; * retrieves a supply from a given location, filling a box in the process
+    ; 1. calls the handle_box_acquisition task to ensure an empty box is available at the supply location
+    ; 2. routes the worker bot to the supply location
+    ; 3. grounds the specific box (if not already grounded)
+    ; 4. flexible grounding of boxes (bulk)
+    ; 5. fills the specific box with the supply
+    ; 6. flexible filling of boxes (bulk)
+    ; 7. picks up the specific box
+    ; 8. flexible picking up of boxes (bulk)
+
+    (:method m_retrieve_supply
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?sup - supply ?sup_loc - location)
+        :task (retrieve_supply ?bot ?carr ?box ?sup ?sup_loc)
+        :precondition (and
+            (box_is_empty ?box)
+        )
+        :subtasks (and
+            ; Make sure to have an empty box at disposal
+            (task0 (handle_box_acquisition ?bot ?carr ?box ?sup ?sup_loc))
+            (task1 (route_worker_bot ?bot ?sup_loc)) ; travel to supply location
+            ; First ground the specific box, then give freedom to the planner to ground any other boxes
+            (task2 (ground_box ?bot ?carr ?box))
+            (task3 (ground_boxes_bulk ?bot ?carr))
+            ; Fill first the specific box, then give freedom to the planner to fill any other boxes
+            (task4 (fill_box ?bot ?box ?sup ?sup_loc))
+            (task5 (fill_boxes_bulk ?bot ?sup_loc))
+            ; Pick up first the specific box, then give freedom to the planner to pick up any other boxes
+            (task6 (pick_up_box ?bot ?carr ?box ?sup_loc))
+            (task7 (pick_up_boxes_bulk ?bot ?carr ?sup_loc))
+        )
+        :ordering (and
+            (task0 < task1)
+            (task1 < task2)
+            (task2 < task3)
+            (task3 < task4)
+            (task4 < task5)
+            (task5 < task6)
+            (task6 < task7)
+        )
+    )
+
+
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;;;;;;;;;;;;;;;;;;;                                     PRIMITIVES                                 ;;;;;;;;;;;;;;;;;;;
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ;;
+    ;; Move Actions
+    ;;
+    
+    (:action move_bot_alone
+        :parameters (?bot - robot ?from - location ?to - location)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?from)
+            (linked ?from ?to)
+            ; the bot is free (carrier is empty / not helping a patient)
+            (bot_is_free ?bot)
+        )
+        :effect (and
+            ; change location (bot)
+            (not (at ?bot ?from))
+            (at ?bot ?to)
+        )
+    )
+    
+    (:action move_worker_bot_with_1_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?from - location ?to - location)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?from)
+            (linked ?from ?to)
+            ; carrier checks
+            (bot_owns_carrier ?bot ?carr)
+            (carrier_has_1 ?carr) ; the bot carries a single box
+            (carrying_box ?carr ?box) ; carrying one box
+        )
+        :effect (and
+            ; update location (bot)
+            (not (at ?bot ?from))
+            (at ?bot ?to)
+            ; update location (box)
+            (not (at ?box ?from))
+            (at ?box ?to)
+        )
+    )
+    
+    (:action move_worker_bot_with_2_boxes
+        :parameters (?bot - worker_bot ?carr - carrier ?box1 - box ?box2 - box ?from - location ?to - location)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?from)
+            (linked ?from ?to)
+            ; carrier is owned by the bot and has capacity for 2 boxes
+            (bot_owns_carrier ?bot ?carr)
+            (carrier_has_2 ?carr)
+            ; both boxes are on the carrier
+            (carrying_box ?carr ?box1)
+            (carrying_box ?carr ?box2)
+            ; boxes must be different
+            (not (= ?box1 ?box2))
+        )
+        :effect (and
+            ; update location (bot)
+            (not (at ?bot ?from))
+            (at ?bot ?to)
+            ; update location of both boxes
+            (not (at ?box1 ?from))
+            (at ?box1 ?to)
+            (not (at ?box2 ?from))
+            (at ?box2 ?to)
+        )
+    )
+
+    (:action move_worker_bot_with_3_boxes
+        :parameters (?bot - worker_bot ?carr - carrier ?box1 - box ?box2 - box  ?box3 - box  ?from - location ?to - location)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?from)
+            (linked ?from ?to)
+            ; carrier is owned by the bot and has capacity for 3 boxes
+            (bot_owns_carrier ?bot ?carr)
+            (carrier_has_3 ?carr)
+            ; all three boxes are on the carrier
+            (carrying_box ?carr ?box1)
+            (carrying_box ?carr ?box2)
+            (carrying_box ?carr ?box3)
+            ; boxes must be different
+            (not (= ?box1 ?box2))
+            (not (= ?box1 ?box3))
+            (not (= ?box2 ?box3))
+        )
+        :effect (and
+            ; update location (bot)
+            (not (at ?bot ?from))
+            (at ?bot ?to)
+            ; update location of all three boxes
+            (not (at ?box1 ?from))
+            (at ?box1 ?to)
+            (not (at ?box2 ?from))
+            (at ?box2 ?to)
+            (not (at ?box3 ?from))
+            (at ?box3 ?to)
+        )
+    )
+
+    (:action move_helper_bot_patient
+        :parameters (?bot - helper_bot ?from - location ?to - location ?pat - patient)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?from)
+            (linked ?from ?to)
+            ; helper bot is helping a patient
+            (helping_patient ?bot ?pat)
+        )
+        :effect (and
+            ; update location (bot)
+            (not (at ?bot ?from))
+            (at ?bot ?to)
+            ; update location (patient)
+            (not (at ?pat ?from))
+            (at ?pat ?to)
+        )
+    )
+    
+
+    ;;
+    ;; Worker Bots : These are the bots that carry boxes with supplies  
+    ;;
+
+    ; pick up first box when carrier is empty (0 -> 1)
+    (:action pick_up_1st_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?loc - location)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?loc)
+            (at ?box ?loc)
+            ; box not being carried
+            (box_on_ground ?box)
+            ; carrier has space
+            (bot_owns_carrier ?bot ?carr)
+            (carrier_empty ?carr)
+            (carrier_can_1 ?carr)
+        )
+        :effect (and
+            ; robot now has the box
+            (carrying_box ?carr ?box)
+            (not (box_on_ground ?box))
+            ; update carrier capacity
+            (not (carrier_empty ?carr))
+            (carrier_has_1 ?carr)
+            ; bot becomes busy
+            (not (bot_is_free ?bot))
+        )
+    )
+
+    ; pick up second box when carrier has one (1 -> 2)
+    (:action pick_up_2nd_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?loc - location)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?loc)
+            (at ?box ?loc)
+            ; box not being carried
+            (box_on_ground ?box)
+            ; carrier has space
+            (bot_owns_carrier ?bot ?carr)
+            (carrier_has_1 ?carr) ; one box is already being carried
+            (carrier_can_2 ?carr) ; carrier must have capacity for 2 boxes
+        )
+        :effect (and
+            ; robot now has the box
+            (carrying_box ?carr ?box)
+            (not (box_on_ground ?box))
+            ; update carrier capacity
+            (not (carrier_has_1 ?carr))
+            (carrier_has_2 ?carr)
+        )
+    )
+
+    ; pick up third box when carrier has two (2 -> 3)
+    (:action pick_up_3rd_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box ?loc - location)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?loc)
+            (at ?box ?loc)
+            ; box not being carried
+            (box_on_ground ?box)
+            ; carrier has space
+            (bot_owns_carrier ?bot ?carr)
+            (carrier_has_2 ?carr) ; two boxes are already being carried
+            (carrier_can_3 ?carr) ; carrier must have capacity for 3 boxes
+        )
+        :effect (and
+            ; robot now has the box
+            (carrying_box ?carr ?box)
+            (not (box_on_ground ?box))
+            ; update carrier capacity
+            (not (carrier_has_2 ?carr))
+            (carrier_has_3 ?carr)
+        )
+    )
+
+    ; drop down a box when carrier is full (3 -> 2)
+    (:action drop_down_3rd_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :precondition (and
+            ; the bot carries the box
+            (carrying_box ?carr ?box)
+            ; bot owns the carrier
+            (bot_owns_carrier ?bot ?carr)
+            (carrier_has_3 ?carr) ; carrier has 3 boxes on (maximum capacity)
+        )
+        :effect (and
+            ; leave box there
+            (not (carrying_box ?carr ?box))
+            (box_on_ground ?box)
+            ; update carrier capacity
+            (not (carrier_has_3 ?carr))
+            (carrier_has_2 ?carr)
+        )
+    )
+
+    ; drop down a box when carrier has two boxes (2 -> 1)
+    (:action drop_down_2nd_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :precondition (and
+            ; the bot carries the box
+            (carrying_box ?carr ?box)
+            ; bot owns the carrier
+            (bot_owns_carrier ?bot ?carr)
+            (carrier_has_2 ?carr) ; carrier has 2 boxes on
+        )
+        :effect (and
+            ; leave box there
+            (not (carrying_box ?carr ?box))
+            (box_on_ground ?box)
+            ; update carrier capacity
+            (not (carrier_has_2 ?carr))
+            (carrier_has_1 ?carr)
+        )
+    )
+
+    ; drop down a box when carrier has 1 boxes (1 -> 0)
+    (:action drop_down_1st_box
+        :parameters (?bot - worker_bot ?carr - carrier ?box - box)
+        :precondition (and
+            ; the bot carries the box
+            (carrying_box ?carr ?box)
+            ; bot owns the carrier
+            (bot_owns_carrier ?bot ?carr)
+            (carrier_has_1 ?carr)
+        )
+        :effect (and
+            ; leave box there
+            (not (carrying_box ?carr ?box))
+            (box_on_ground ?box)
+            ; update carrier capacity
+            (not (carrier_has_1 ?carr))
+            (carrier_empty ?carr) ; carrier is now empty
+            ; robot is once again free
+            (bot_is_free ?bot)
+        )
+    )
+
+
+    (:action fill_box
+        :parameters (?bot - worker_bot ?box - box ?sup - supply ?loc - location)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?loc)
+            (at ?sup ?loc)
+            (at ?box ?loc)
+            ; the box is not being carried
+            (box_on_ground ?box)
+            ; box must be empty
+            (box_is_empty ?box)
+        )
+        :effect (and
+            ; fill the box with the supply
+            (supply_in_box ?sup ?box)
+            (not (box_is_empty ?box))
+        )
+    )
+
+
+    (:action deliver_supply
+        :parameters (?bot - worker_bot ?box - box ?sup - supply ?loc - location ?mu - med_unit)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?loc)
+            (at ?mu ?loc)
+            (at ?box ?loc)
+            ; the box is NOT being carried
+            (box_on_ground ?box)
+            ; the supply is in the box
+            (supply_in_box ?sup ?box)
+            ; the medical unit needs such supply
+            (needs_supply ?mu ?sup)
+        )
+        :effect (and
+            ; empty the box
+            (not (supply_in_box ?sup ?box))
+            (box_is_empty ?box)
+            ; satisfy the medical unit's need and hand over the supply
+            (not (needs_supply ?mu ?sup)) 
+            (has_supply ?mu ?sup)
+        )
+    )
+
+    ;;
+    ;; Helper Bots : These are the bots that accompany patients to medical units
+    ;;
+
+    (:action pick_up_patient
+        :parameters (?bot - helper_bot ?pat - patient ?loc - location)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?loc)
+            (at ?pat ?loc)
+            ; patient is not being helped by some other bot
+            (patient_on_ground ?pat)
+            ; helper bot is free
+            (bot_is_free ?bot)
+        )
+        :effect (and
+            ; helper bot accompanies the patient
+            (helping_patient ?bot ?pat)
+            (not (patient_on_ground ?pat))
+            ; helper bot is now busy
+            (not (bot_is_free ?bot))
+        )
+    )
+    (:action drop_down_patient
+        :parameters (?bot - helper_bot ?pat - patient)
+        :precondition (and
+            ; helper bot accompanies the patient
+            (helping_patient ?bot ?pat)
+        )
+        :effect (and
+            ; helper bot no longer accompanies the patient
+            (not (helping_patient ?bot ?pat))
+            (patient_on_ground ?pat)
+            ; helper bot is no longer busy
+            (bot_is_free ?bot)
+        )
+    )
+    (:action deliver_patient
+        :parameters (?bot - helper_bot ?pat - patient ?mu - med_unit ?loc - location)
+        :precondition (and
+            ; location consistency
+            (at ?bot ?loc)
+            (at ?mu ?loc)
+            (at ?pat ?loc)
+            ; the patient is not being helped by some other bot
+            (patient_on_ground ?pat) 
+            ; the patient needs treatment at the medical unit
+            (needs_patient ?mu ?pat)
+        )
+        :effect (and
+            ; satisfy the medical unit's need for the patient and hand over the patient
+            (not (needs_patient ?mu ?pat))
+            (has_patient ?mu ?pat)
+        )
+    )
+)

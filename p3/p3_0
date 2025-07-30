@@ -1,0 +1,55 @@
+==>
+348 fill_box wBot1 box1 scalpel central_warehouse
+830 fill_box wBot1 box3 bandages central_warehouse
+864 fill_box wBot1 box2 defibrillator central_warehouse
+875 pick_up_1st_box wBot1 carrier1 box1 central_warehouse
+885 pick_up_2nd_box wBot1 carrier1 box2 central_warehouse
+905 pick_up_3rd_box wBot1 carrier1 box3 central_warehouse
+953 move_worker_bot_with_3_boxes wBot1 carrier1 box3 box1 box2 central_warehouse corridor1
+1101 move_worker_bot_with_3_boxes wBot1 carrier1 box3 box1 box2 corridor1 reception
+1439 move_worker_bot_with_3_boxes wBot1 carrier1 box3 box2 box1 reception emergency_room
+1752 move_worker_bot_with_3_boxes wBot1 carrier1 box3 box2 box1 emergency_room reception
+4506 move_worker_bot_with_3_boxes wBot1 carrier1 box3 box2 box1 reception emergency_room
+4517 drop_down_3rd_box wBot1 carrier1 box2
+5316 deliver_supply wBot1 box2 defibrillator emergency_room resuscitation_unit
+5332 move_worker_bot_with_2_boxes wBot1 carrier1 box3 box1 emergency_room reception
+5585 move_worker_bot_with_2_boxes wBot1 carrier1 box3 box1 reception emergency_room
+5614 drop_down_2nd_box wBot1 carrier1 box1
+5741 deliver_supply wBot1 box1 scalpel emergency_room trauma_unit
+5742 move_worker_bot_with_1_box wBot1 carrier1 box3 emergency_room reception
+5758 move_worker_bot_with_1_box wBot1 carrier1 box3 reception corridor1
+5858 move_worker_bot_with_1_box wBot1 carrier1 box3 corridor1 surgical_block
+5905 drop_down_1st_box wBot1 carrier1 box3
+5906 deliver_supply wBot1 box3 bandages surgical_block operation_unit
+root 1 13 347
+1 deliver_supply_to_medical_unit bandages operation_unit -> m_deliver_supply_skip_retrieval 924 5903 5906
+13 deliver_supply_to_medical_unit scalpel trauma_unit -> m_deliver_supply_complete 5908 914 1736 5741
+136 handle_box_acquisition wBot1 carrier1 box1 scalpel central_warehouse -> m_handle_box_acquisition_at_supply_location
+328 route_worker_bot wBot1 central_warehouse -> m_route_worker_bot_noop
+335 ground_box wBot1 carrier1 box1 -> ground_box_noop
+340 ground_boxes_bulk wBot1 carrier1 -> m_ground_boxes_bulk_noop
+347 deliver_supply_to_medical_unit defibrillator resuscitation_unit -> m_deliver_supply_skip_retrieval 892 1601 5316
+374 fill_boxes_bulk wBot1 central_warehouse -> m_fill_box_bulk 830 854
+854 fill_boxes_bulk wBot1 central_warehouse -> m_fill_box_bulk 864 870
+870 fill_boxes_bulk wBot1 central_warehouse -> m_fill_boxes_bulk_noop
+873 pick_up_box wBot1 carrier1 box1 central_warehouse -> m_pick_up_only_box_1 875
+881 pick_up_boxes_bulk wBot1 carrier1 central_warehouse -> m_pick_up_box_2 885 902
+892 route_worker_bot wBot1 emergency_room -> m_route_worker_bot_noop
+902 pick_up_boxes_bulk wBot1 carrier1 central_warehouse -> m_pick_up_box_3 905 909
+909 pick_up_boxes_bulk wBot1 carrier1 central_warehouse -> m_pick_up_boxes_noop
+914 route_worker_bot wBot1 emergency_room -> m_route_worker_bot_noop
+924 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_with_3_boxes 953 1062
+1062 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_with_3_boxes 1101 1236
+1236 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_with_3_boxes 1439 1591
+1591 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_with_3_boxes 1752 1770
+1601 drop_down_box wBot1 carrier1 box2 -> m_drop_down_3rd_box 4517
+1736 drop_down_box wBot1 carrier1 box1 -> m_drop_down_2nd_box 5614
+1770 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_with_3_boxes 4506 4516
+4516 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_with_2_boxes 5332 5340
+5340 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_with_2_boxes 5585 5613
+5613 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_with_1_box 5742 5746
+5746 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_with_1_box 5758 5818
+5818 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_with_1_box 5858 5896
+5896 route_worker_bot wBot1 surgical_block -> m_route_worker_bot_noop
+5903 drop_down_box wBot1 carrier1 box3 -> m_drop_down_1st_box 5905
+5908 retrieve_supply wBot1 carrier1 box1 scalpel central_warehouse -> m_retrieve_supply 136 328 335 340 348 374 873 881
