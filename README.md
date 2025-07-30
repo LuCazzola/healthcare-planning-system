@@ -17,6 +17,8 @@ healthcare-planning-system
 └─ p5/ # ROS2 integration with PlanSys2
 ```
 
+<br>
+
 ## Quick Start
 
 ### Problems 1-4 (PDDL/HDDL/Temporal Planning)
@@ -166,6 +168,8 @@ planutils run optic -- domain.pddl p4_0.pddl
 ```
 </details>
 
+<br>
+
 ### Problem 5 (ROS2 Integration)
 
 Build ROS2 environment:
@@ -197,6 +201,8 @@ source /workspace/p5/launch/commands
 get plan
 run
 ```
+
+<br>
 
 ## Cite 💜
 
