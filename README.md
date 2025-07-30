@@ -1,4 +1,4 @@
-# Healthcare Planning System
+# Healthcare Planning System 🧑🏻‍⚕️🤖
 
 Assignment for the course Automated Planning Theory and Practice (A.Y. 2024-2025)  
 University of Trento - Artificial Intelligence Systems
